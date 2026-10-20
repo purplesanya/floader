@@ -3,35 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{ t('meta_description') }}">
+  <meta name="theme-color" content="#f3eee4">
   <title>{% block title %}{{ t("app_name") }}{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='floader.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app-extra.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body data-page="{% block page_id %}{% endblock %}">
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="{{ url_for('index', lang=lang) }}" aria-label="{{ t('go_search') }}">
-        <span class="brand-mark" aria-hidden="true">f.is</span>
-        <span class="brand-text">{{ t("app_name") }}</span>
-      </a>
-      <div class="topbar-actions">
-        <nav class="primary-nav" aria-label="Primary">
-          <a href="{{ url_for('index', lang=lang) }}" class="{% if request.endpoint == 'index' %}active{% endif %}">{{ t("nav_search") }}</a>
-          <a href="{{ url_for('recommendations', lang=lang) }}" class="{% if request.endpoint == 'recommendations' %}active{% endif %}">{{ t("nav_recommendations") }}</a>
-          <a href="{{ url_for('bookmarks', lang=lang) }}" class="{% if request.endpoint == 'bookmarks' %}active{% endif %}">{{ t("nav_bookmarks") }}</a>
-        </nav>
-        <nav class="language-switch" aria-label="Language">
-          <a href="{{ lang_url(lang='en') }}" class="{% if lang == 'en' %}active{% endif %}">EN</a>
-          <a href="{{ lang_url(lang='ru') }}" class="{% if lang == 'ru' %}active{% endif %}">RU</a>
-        </nav>
-      </div>
-    </header>
+  <a class="skip-link" href="#main">{{ t("skip_to_content") }}</a>
 
-    <main class="page">
-      {% block content %}{% endblock %}
-    </main>
-  </div>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="{{ url_for('index', lang=lang) }}">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"></path>
+            <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"></path>
+          </svg>
+        </span>
+        <span class="brand-name">{{ t("app_name") }}</span>
+      </a>
+      <nav class="language-switch" aria-label="{{ t('nav_language_label') }}">
+        <a href="{{ lang_url(lang='en') }}" class="{% if lang == 'en' %}active{% endif %}" hreflang="en" {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+        <a href="{{ lang_url(lang='ru') }}" class="{% if lang == 'ru' %}active{% endif %}" hreflang="ru" {% if lang == 'ru' %}aria-current="true"{% endif %}>RU</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="shell main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-inner">
+      <span>{{ t("topbar_note") }}</span>
+      <span class="footer-links">
+        <a href="{{ url_for('recommendations', lang=lang) }}">{{ t("nav_recommendations") }}</a>
+        <a href="{{ url_for('bookmarks', lang=lang) }}">{{ t("nav_bookmarks") }}</a>
+      </span>
+    </div>
+  </footer>
 
   <div class="toast-stack" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
   {% block scripts %}{% endblock %}

@@ -14,14 +14,12 @@ from flibusta_utils import (
     download_books_to_disk,
     download_single_book,
     fetch_recommendations,
-    find_books,
-    get_author_profile,
-    get_author_name,
+    get_author_page,
     get_book_details,
-    search_authors,
-    search_books,
+    search_catalog,
     validate_download_link,
 )
+from job_store import FileJobStore
 
 app = Flask(__name__)
 
@@ -38,27 +36,40 @@ MAX_BULK_BOOKS = 1000
 
 cache = {}
 CACHE_LOCK = threading.Lock()
-JOBS = {}
+JOBS = FileJobStore(Path(tempfile.gettempdir()) / "floader_jobs")
 JOBS_LOCK = threading.Lock()
 
 LANGUAGES = {"en", "ru"}
 TRANSLATIONS = {
     "en": {
         "app_name": "FLoader",
+        "meta_description": "FLoader helps you find a book by author or title, choose a format, and download it.",
+        "nav_primary_label": "Primary navigation",
+        "nav_language_label": "Language",
+        "skip_to_content": "Skip to content",
+        "saved_books": "Saved books",
+        "load_more": "Show more",
+        "download_format_label": "Download {title} in {format}",
+        "loading_formats": "Loading formats...",
         "topbar_note": "For books you are allowed to download",
         "go_search": "Go to search",
         "search_title": "Search - FLoader",
-        "search_eyebrow": "Book and author search",
-        "search_heading": "Find a book, choose formats, download cleanly.",
-        "search_lead": "Search by author or title. Results split authors and direct book matches so you can move quickly.",
+        "search_eyebrow": "Book search",
+        "search_heading": "Which book are we looking for?",
+        "search_lead": "Enter an author or title — we’ll show you the books and formats.",
         "search_label": "Search query",
         "search_placeholder": "Author name or book title",
         "search_button": "Search",
+        "search_examples_label": "For example:",
+        "example_pushkin": "Pushkin",
+        "example_master": "Master and Margarita",
+        "example_strugatsky": "Strugatsky",
         "search_hint": "Tip: press",
         "search_hint_tail": "anywhere on this page to focus search.",
         "searching": "Searching...",
         "results_title": "Results - FLoader",
         "results_eyebrow": "Search results",
+        "results_lead": "Choose an author or a book — formats will appear next to it.",
         "results_for": "Results for",
         "also_searched": "Also searched",
         "new_search": "New Search",
@@ -72,11 +83,12 @@ TRANSLATIONS = {
         "search_again": "Search Again",
         "books_title": "Books - FLoader",
         "author_library": "Author library",
-        "books_found_note": "{count} books found. Single selections download as files; multiple selections download as ZIP.",
+        "books_found_note": "Books found: {count}. Choose books and a format.",
         "back_to_search": "Back to Search",
         "filter_titles": "Filter titles",
         "filter_placeholder": "Type to narrow this author...",
         "book_format": "Book format",
+        "formats_label": "Formats",
         "selected": "selected",
         "select_visible": "Select Visible",
         "clear": "Clear",
@@ -114,9 +126,9 @@ TRANSLATIONS = {
         "nav_recommendations": "Recommendations",
         "nav_bookmarks": "Bookmarks",
         "recommendations_title": "Recommendations - FLoader",
-        "recommendations_eyebrow": "Community recommendations",
-        "recommendations_heading": "Books people are recommending now.",
-        "recommendations_lead": "Parsed from Flibusta community recommendation pages and cached for a short time.",
+        "recommendations_eyebrow": "What to read",
+        "recommendations_heading": "Recommendations",
+        "recommendations_lead": "Books that readers recommend.",
         "recommended_books": "Recommended books",
         "recent_recommendations": "Recent recommendations",
         "recommended_by": "Recommended by",
@@ -147,20 +159,33 @@ TRANSLATIONS = {
     },
     "ru": {
         "app_name": "FLoader",
+        "meta_description": "FLoader помогает быстро найти книгу по автору или названию, выбрать формат и скачать.",
+        "nav_primary_label": "Основная навигация",
+        "nav_language_label": "Язык",
+        "skip_to_content": "Перейти к содержимому",
+        "saved_books": "Сохранённые книги",
+        "load_more": "Показать ещё",
+        "download_format_label": "Скачать {title} в формате {format}",
+        "loading_formats": "Загружаем форматы...",
         "topbar_note": "Для книг, которые вы имеете право скачивать",
         "go_search": "Перейти к поиску",
         "search_title": "Поиск - FLoader",
-        "search_eyebrow": "Поиск книг и авторов",
-        "search_heading": "Найдите книгу, выберите формат и скачайте без лишнего.",
-        "search_lead": "Ищите по автору или названию. Результаты отдельно показывают авторов и найденные книги.",
+        "search_eyebrow": "Поиск книг",
+        "search_heading": "Какую книгу ищем?",
+        "search_lead": "Введите автора или название — покажем книги и форматы.",
         "search_label": "Поисковый запрос",
         "search_placeholder": "Автор или название книги",
         "search_button": "Искать",
+        "search_examples_label": "Например:",
+        "example_pushkin": "Пушкин",
+        "example_master": "Мастер и Маргарита",
+        "example_strugatsky": "Стругацкие",
         "search_hint": "Подсказка: нажмите",
         "search_hint_tail": "на этой странице, чтобы перейти к поиску.",
         "searching": "Ищем...",
         "results_title": "Результаты - FLoader",
         "results_eyebrow": "Результаты поиска",
+        "results_lead": "Выберите автора или книгу — форматы появятся рядом.",
         "results_for": "Результаты для",
         "also_searched": "Также искали",
         "new_search": "Новый поиск",
@@ -174,11 +199,12 @@ TRANSLATIONS = {
         "search_again": "Искать снова",
         "books_title": "Книги - FLoader",
         "author_library": "Книги автора",
-        "books_found_note": "Найдено книг: {count}. Одна выбранная книга скачивается файлом; несколько книг скачиваются ZIP-архивом.",
+        "books_found_note": "Найдено книг: {count}. Выберите книги и формат.",
         "back_to_search": "Назад к поиску",
         "filter_titles": "Фильтр по названию",
         "filter_placeholder": "Введите часть названия...",
         "book_format": "Формат книги",
+        "formats_label": "Форматы",
         "selected": "выбрано",
         "select_visible": "Выбрать видимые",
         "clear": "Сбросить",
@@ -216,9 +242,9 @@ TRANSLATIONS = {
         "nav_recommendations": "Рекомендации",
         "nav_bookmarks": "Закладки",
         "recommendations_title": "Рекомендации - FLoader",
-        "recommendations_eyebrow": "Рекомендации сообщества",
-        "recommendations_heading": "Книги, которые сейчас рекомендуют.",
-        "recommendations_lead": "Список берется со страниц рекомендаций Flibusta и ненадолго кешируется.",
+        "recommendations_eyebrow": "Что почитать",
+        "recommendations_heading": "Рекомендации",
+        "recommendations_lead": "Книги, которые советуют читатели.",
         "recommended_books": "Рекомендуемые книги",
         "recent_recommendations": "Свежие рекомендации",
         "recommended_by": "Рекомендует",
@@ -426,22 +452,13 @@ def merge_books(existing, incoming):
     return existing
 
 
-def cached_author_search(query):
+def cached_catalog_search(query):
     normalized_query = query.casefold()
-    authors = get_cached(f"author_search:{normalized_query}")
-    if authors is None:
-        authors = search_authors(query)
-        set_cached(f"author_search:{normalized_query}", authors)
-    return authors
-
-
-def cached_book_search(query):
-    normalized_query = query.casefold()
-    books_found = get_cached(f"book_search:{normalized_query}")
-    if books_found is None:
-        books_found = search_books(query)
-        set_cached(f"book_search:{normalized_query}", books_found)
-    return books_found
+    cached = get_cached(f"catalog_search:{normalized_query}")
+    if cached is None:
+        cached = search_catalog(query)
+        set_cached(f"catalog_search:{normalized_query}", cached)
+    return cached
 
 
 def cached_recommendations():
@@ -460,12 +477,12 @@ def cached_book_details(book_id):
     return details
 
 
-def cached_author_profile(author_id):
-    profile = get_cached(f"author_profile:{author_id}")
-    if profile is None:
-        profile = get_author_profile(author_id)
-        set_cached(f"author_profile:{author_id}", profile)
-    return profile
+def cached_author_page(author_id):
+    page = get_cached(f"author_page:{author_id}")
+    if page is None:
+        page = get_author_page(author_id)
+        set_cached(f"author_page:{author_id}", page)
+    return page
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -476,19 +493,29 @@ def index():
             return render_template("index.html", error=translate("empty_query"))
 
         try:
-            query_variants = keyboard_layout_variants(query)
-            authors = []
-            books_found = []
-            for search_query in query_variants:
-                merge_authors(authors, cached_author_search(search_query))
-                merge_books(books_found, cached_book_search(search_query))
+            authors, books_found = cached_catalog_search(query)
+            authors = list(authors)
+            books_found = list(books_found)
+
+            if not authors and not books_found:
+                for search_query in keyboard_layout_variants(query):
+                    if search_query == query:
+                        continue
+                    try:
+                        variant_authors, variant_books = cached_catalog_search(search_query)
+                    except Exception:
+                        logger.exception("Layout variant search failed for %r", search_query)
+                        continue
+                    merge_authors(authors, variant_authors)
+                    merge_books(books_found, variant_books)
+                    if authors or books_found:
+                        break
 
             return render_template(
                 "results.html",
                 authors=authors,
                 books=books_found,
                 search_query=query,
-                searched_variants=[variant for variant in query_variants if variant != query],
             )
         except Exception:
             logger.exception("Error during unified search for %r", query)
@@ -574,43 +601,16 @@ def books(author_id):
         ), 400
 
     try:
-        cache_key = f"all_books_for_author:{author_id}"
-        books_list = get_cached(cache_key)
-
-        if books_list is None:
-            logger.info("Fetching all books for author %s", author_id)
-            books_list = find_books(author_id)
-            set_cached(cache_key, books_list)
-
-        author_name = None
-        author_bio = ""
-        with CACHE_LOCK:
-            author_search_items = [
-                cached_value
-                for key, (cached_value, _) in cache.items()
-                if key.startswith("author_search:")
-            ]
-        for authors_list in author_search_items:
-            for name, aid in authors_list:
-                if aid == author_id:
-                    author_name = name
-                    break
-            if author_name:
-                break
-
-        if not author_name:
-            profile = cached_author_profile(author_id)
-            author_name = profile.get("name") or get_author_name(author_id) or translate("selected_author")
-            author_bio = profile.get("bio") or ""
-        else:
-            profile = cached_author_profile(author_id)
-            author_bio = profile.get("bio") or ""
+        page = cached_author_page(author_id)
+        books_list = page.get("books") or []
+        author_name = page.get("name") or translate("selected_author")
+        author_bio = page.get("bio") or ""
 
         return render_template(
             "books.html",
             books=books_list,
             author_id=author_id,
-            author_name=author_name or translate("selected_author"),
+            author_name=author_name,
             author_bio=author_bio,
             format_counts=get_format_counts(books_list),
         )

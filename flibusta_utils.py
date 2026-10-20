@@ -36,7 +36,10 @@ _AUTHOR_PATH_RE = re.compile(r"^/a/(?P<author_id>\d+)/?$")
 _USER_PATH_RE = re.compile(r"^/user/(?P<user_id>\d+)/?$")
 _last_request_time = 0.0
 _rate_limit_lock = threading.Lock()
+_session_local = threading.local()
 MIN_REQUEST_INTERVAL = 0.2
+MAX_SEARCH_BOOKS = 20
+MAX_SEARCH_AUTHORS = 3
 
 
 def rate_limit():
@@ -50,9 +53,14 @@ def rate_limit():
 
 
 def get_session():
+    session = getattr(_session_local, "session", None)
+    if session is not None:
+        return session
+
     session = requests.Session()
     retry = Retry(
         total=3,
+        read=0,
         backoff_factor=1,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET", "POST"],
@@ -68,6 +76,7 @@ def get_session():
             )
         }
     )
+    _session_local.session = session
     return session
 
 
@@ -144,40 +153,53 @@ def validate_download_link(link, expected_format):
     return action == "download"
 
 
-def search_authors(author_name, max_retries=3):
+def _parse_search_authors(soup, limit=MAX_SEARCH_AUTHORS):
+    authors = []
+    author_section = None
+    for header_text in ("Найденные писатели", "Авторы", "Authors"):
+        author_section = soup.find("h3", string=lambda text: text and header_text in text)
+        if author_section:
+            break
+
+    if author_section:
+        author_list = author_section.find_next_sibling("ul")
+        if author_list:
+            for link in author_list.find_all("a"):
+                author_id = _extract_author_id(link.get("href", ""))
+                if author_id:
+                    authors.append((link.text.strip(), author_id))
+                if len(authors) >= limit:
+                    break
+
+    return authors
+
+
+def search_catalog(query, max_retries=2):
     session = get_session()
     for attempt in range(max_retries):
         try:
-            logger.info("Searching authors for %r (attempt %s)", author_name, attempt + 1)
+            logger.info("Searching catalog for %r (attempt %s)", query, attempt + 1)
             soup = _get_soup(
                 session,
                 f"{BASE_URL}/booksearch",
-                params={"ask": author_name},
-                timeout=15,
+                params={"ask": query},
+                timeout=12,
             )
-            authors = []
-            author_section = None
-            for header_text in ("Найденные писатели", "Авторы", "Authors"):
-                author_section = soup.find("h3", string=lambda text: text and header_text in text)
-                if author_section:
-                    break
-
-            if author_section:
-                author_list = author_section.find_next_sibling("ul")
-                if author_list:
-                    for link in author_list.find_all("a"):
-                        author_id = _extract_author_id(link.get("href", ""))
-                        if author_id:
-                            authors.append((link.text.strip(), author_id))
-
-            logger.info("Found %s author(s)", len(authors))
-            return authors
+            authors = _parse_search_authors(soup)
+            books = _parse_search_books(soup)
+            logger.info("Found %s author(s) and %s book(s)", len(authors), len(books))
+            return authors, books
         except requests.exceptions.RequestException as exc:
-            logger.warning("Author search attempt %s failed: %s", attempt + 1, exc)
+            logger.warning("Catalog search attempt %s failed: %s", attempt + 1, exc)
             if attempt == max_retries - 1:
                 raise
             time.sleep(2**attempt)
-    return []
+    return [], []
+
+
+def search_authors(author_name, max_retries=2):
+    authors, _ = search_catalog(author_name, max_retries=max_retries)
+    return authors
 
 
 def get_author_name(author_id, max_retries=3):
@@ -326,26 +348,7 @@ def get_book_details(book_id, max_retries=3):
     return {}
 
 
-def search_books(book_title, max_retries=3):
-    session = get_session()
-    for attempt in range(max_retries):
-        try:
-            logger.info("Searching books for %r (attempt %s)", book_title, attempt + 1)
-            soup = _get_soup(
-                session,
-                f"{BASE_URL}/booksearch",
-                params={"ask": book_title},
-                timeout=15,
-            )
-            break
-        except requests.exceptions.RequestException as exc:
-            logger.warning("Book search attempt %s failed: %s", attempt + 1, exc)
-            if attempt == max_retries - 1:
-                return []
-            time.sleep(2**attempt)
-    else:
-        return []
-
+def _parse_search_books(soup, limit=MAX_SEARCH_BOOKS):
     book_section_header = soup.find("h3", string=lambda text: text and "Найденные книги" in text)
     if not book_section_header:
         return []
@@ -354,7 +357,7 @@ def search_books(book_title, max_retries=3):
     if not results_list:
         return []
 
-    potential_books = []
+    books = []
     for item in results_list.find_all("li", recursive=False):
         main_book_link = item.find("a", href=lambda href: href and href.startswith("/b/"))
         if not main_book_link:
@@ -365,40 +368,22 @@ def search_books(book_title, max_retries=3):
             continue
 
         author_link = item.find("a", href=lambda href: href and href.startswith("/a/"))
-        potential_books.append(
+        books.append(
             {
                 "title": main_book_link.text.strip(),
-                "book_page_url": _absolute_url(main_book_link["href"]),
                 "author_name": author_link.text.strip() if author_link else "Unknown Author",
                 "author_id": _extract_author_id(author_link.get("href", "")) if author_link else None,
                 "book_id": book_id,
             }
         )
+        if len(books) >= limit:
+            break
+    return books
 
-    if not potential_books:
-        return []
 
-    final_books = []
-    with ThreadPoolExecutor(max_workers=min(3, len(potential_books))) as executor:
-        future_to_book = {
-            executor.submit(get_book_details, book["book_id"]): book
-            for book in potential_books
-        }
-        for future in as_completed(future_to_book):
-            book_data = future_to_book[future]
-            try:
-                details = future.result()
-                download_links = details.get("links", {})
-                if download_links:
-                    book_data["description"] = details.get("description", "")
-                    del book_data["book_page_url"]
-                    book_data["links"] = download_links
-                    final_books.append(book_data)
-            except Exception:
-                logger.exception("Failed to process details for %r", book_data["title"])
-
-    logger.info("Found %s books with download links", len(final_books))
-    return final_books
+def search_books(book_title, max_retries=2):
+    _, books = search_catalog(book_title, max_retries=max_retries)
+    return books
 
 
 def _recommendation_links(soup):
@@ -467,20 +452,24 @@ def _parse_recommendation_page(soup, *, include_users=False, limit=40):
 
 def fetch_recommendations(limit=40):
     session = get_session()
+
+    def fetch(view, include_users):
+        soup = _get_soup(session, f"{BASE_URL}/rec", params={"view": view}, timeout=20)
+        return _parse_recommendation_page(soup, include_users=include_users, limit=limit)
+
     recommended_books = []
     recent_recommendations = []
-
-    try:
-        soup = _get_soup(session, f"{BASE_URL}/rec", params={"view": "books"}, timeout=20)
-        recommended_books = _parse_recommendation_page(soup, include_users=False, limit=limit)
-    except requests.exceptions.RequestException as exc:
-        logger.warning("Failed to fetch recommended books: %s", exc)
-
-    try:
-        soup = _get_soup(session, f"{BASE_URL}/rec", params={"view": "recs"}, timeout=20)
-        recent_recommendations = _parse_recommendation_page(soup, include_users=True, limit=limit)
-    except requests.exceptions.RequestException as exc:
-        logger.warning("Failed to fetch recent recommendations: %s", exc)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        books_future = executor.submit(fetch, "books", False)
+        recs_future = executor.submit(fetch, "recs", True)
+        try:
+            recommended_books = books_future.result()
+        except Exception as exc:
+            logger.warning("Failed to fetch recommended books: %s", exc)
+        try:
+            recent_recommendations = recs_future.result()
+        except Exception as exc:
+            logger.warning("Failed to fetch recent recommendations: %s", exc)
 
     return {
         "recommended_books": recommended_books,
@@ -538,44 +527,59 @@ def get_author_profile(author_id, max_retries=3):
     return {"author_id": str(author_id), "name": None, "bio": ""}
 
 
-def find_books(author_id, max_retries=3):
+def _books_from_author_soup(soup, author_id):
+    books = []
+    seen_book_ids = set()
+
+    for link in soup.select("a[href^='/b/']"):
+        book_id = _extract_book_id(link.get("href", ""))
+        if not book_id or book_id in seen_book_ids:
+            continue
+        seen_book_ids.add(book_id)
+
+        title = link.text.strip()
+        parent = link.find_parent(["div", "li"]) or soup
+
+        download_links = {}
+        for format_link in parent.find_all("a", href=lambda href: href and f"/b/{book_id}" in href):
+            file_format = _format_from_link_text(format_link.text.strip())
+            if file_format:
+                download_links[file_format] = _absolute_url(format_link["href"])
+
+        if title and download_links:
+            books.append({"title": title, "book_id": book_id, "links": download_links})
+
+    return books
+
+
+def get_author_page(author_id, max_retries=3):
     if not str(author_id).isdigit():
         raise ValueError("Invalid author ID")
 
     session = get_session()
     for attempt in range(max_retries):
         try:
-            logger.info("Fetching all books and formats for author %s", author_id)
+            logger.info("Fetching author page for %s", author_id)
             soup = _get_soup(session, f"{BASE_URL}/a/{author_id}", timeout=20)
-            books = []
-            seen_book_ids = set()
-
-            for link in soup.select("a[href^='/b/']"):
-                book_id = _extract_book_id(link.get("href", ""))
-                if not book_id or book_id in seen_book_ids:
-                    continue
-                seen_book_ids.add(book_id)
-
-                title = link.text.strip()
-                parent = link.find_parent(["div", "li"]) or soup
-
-                download_links = {}
-                for format_link in parent.find_all("a", href=lambda href: href and f"/b/{book_id}" in href):
-                    file_format = _format_from_link_text(format_link.text.strip())
-                    if file_format:
-                        download_links[file_format] = _absolute_url(format_link["href"])
-
-                if title and download_links:
-                    books.append({"title": title, "book_id": book_id, "links": download_links})
-
+            heading = soup.find("h1", class_="title") or soup.find("h1")
+            books = _books_from_author_soup(soup, author_id)
             logger.info("Found %s unique books for author %s", len(books), author_id)
-            return books
+            return {
+                "author_id": str(author_id),
+                "name": heading.get_text(" ", strip=True) if heading else None,
+                "bio": _extract_author_bio(soup),
+                "books": books,
+            }
         except requests.exceptions.RequestException as exc:
             logger.warning("Author page attempt %s failed: %s", attempt + 1, exc)
             if attempt == max_retries - 1:
                 raise
             time.sleep(2**attempt)
-    return []
+    return {"author_id": str(author_id), "name": None, "bio": "", "books": []}
+
+
+def find_books(author_id, max_retries=3):
+    return get_author_page(author_id, max_retries=max_retries)["books"]
 
 
 def sanitize_filename(filename):

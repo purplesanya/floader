@@ -9,13 +9,12 @@ if (searchForm && searchInput && loadingOverlay) {
       loadingOverlay.setAttribute("aria-hidden", "false");
     }
   });
-
-  searchInput.focus();
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "/" && document.activeElement !== searchInput) {
-      event.preventDefault();
-      searchInput.focus();
-    }
-  });
 }
+
+document.querySelectorAll("[data-example]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!searchForm || !searchInput) return;
+    searchInput.value = button.dataset.example || "";
+    searchForm.requestSubmit();
+  });
+});

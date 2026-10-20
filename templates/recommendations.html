@@ -4,13 +4,11 @@
 {% block page_id %}recommendations{% endblock %}
 
 {% block content %}
-  <section class="page-heading recommendations-heading">
-    <div>
-      <p class="eyebrow">{{ t("recommendations_eyebrow") }}</p>
-      <h1>{{ t("recommendations_heading") }}</h1>
-      <p class="lead compact">{{ t("recommendations_lead") }}</p>
-    </div>
-  </section>
+  <a href="{{ url_for('index', lang=lang) }}" class="back-link">← {{ t("back_to_search") }}</a>
+
+  <p class="eyebrow">{{ t("recommendations_eyebrow") }}</p>
+  <h1 id="recommendations-title">{{ t("recommendations_heading") }}</h1>
+  <p class="lead">{{ t("recommendations_lead") }}</p>
 
   {% if error %}
     <div class="notice notice-error" role="alert">{{ error }}</div>
@@ -23,37 +21,36 @@
     data-remove-bookmark="{{ t('remove_bookmark') }}"
     data-unknown-author="{{ t('unknown_author') }}"
     data-loading-description="{{ t('loading_description') }}"
+    data-loading-formats="{{ t('loading_formats') }}"
     data-no-book-description="{{ t('no_book_description') }}"
     data-details-failed="{{ t('details_failed') }}"
     data-download-formats="{{ t('download_formats') }}"
-    data-show-more="{{ t('show_more') }}"
-    data-show-less="{{ t('show_less') }}"
+    data-download-format-label="{{ t('download_format_label') }}"
     data-details="{{ t('details') }}"
-    data-close="{{ t('close') }}"
-    data-book-description="{{ t('book_description') }}"
   >
-    <section class="feed-section" aria-labelledby="recommended-books-title">
-      <div class="section-heading sticky-section-heading">
+    <section aria-labelledby="recommended-books-title">
+      <div class="section-heading">
         <h2 id="recommended-books-title">{{ t("recommended_books") }}</h2>
-        <span class="count-pill">{{ recommended_books|length }}</span>
+        <span class="count">{{ recommended_books|length }}</span>
       </div>
       {% if recommended_books %}
-        <div class="book-result-list spacious">
+        <div class="panel" data-card-list>
           {% for book in recommended_books %}
-            <article class="book-result recommendation-card" data-detail-card data-title="{{ book.title }}">
-              <div class="book-copy">
+            <article class="row book-row" data-detail-card data-book-id="{{ book.book_id }}">
+              <div class="book-main">
                 <h3>{{ book.title }}</h3>
                 {% if book.author_id %}
-                  <a href="{{ url_for('books', author_id=book.author_id, lang=lang) }}" class="muted-link">{{ book.author_name or t("unknown_author") }}</a>
+                  <a class="byline muted-link" href="{{ url_for('books', author_id=book.author_id, lang=lang) }}">{{ book.author_name or t("unknown_author") }}</a>
                 {% else %}
-                  <span class="muted-text">{{ book.author_name or t("unknown_author") }}</span>
+                  <p class="byline">{{ book.author_name or t("unknown_author") }}</p>
                 {% endif %}
-                <p class="book-description" data-book-id="{{ book.book_id }}">{{ t("loading_description") }}</p>
-              </div>
-              <div class="card-actions">
+                <details class="details">
+                  <summary>{{ t("details") }}</summary>
+                  <p class="book-description" data-book-id="{{ book.book_id }}">{{ t("loading_description") }}</p>
+                </details>
                 <button
                   type="button"
-                  class="bookmark-button"
+                  class="text-link bookmark-toggle"
                   data-bookmark-toggle
                   data-book-id="{{ book.book_id }}"
                   data-title="{{ book.title }}"
@@ -63,43 +60,48 @@
                 >
                   {{ t("bookmark") }}
                 </button>
+              </div>
+              <div class="row-actions">
+                <span class="action-label">{{ t("download_formats") }}</span>
                 <div class="inline-downloads" data-book-id="{{ book.book_id }}" data-title="{{ book.title }}">
-                  <span class="download-loading">{{ t("loading_description") }}</span>
+                  <span class="download-loading">{{ t("loading_formats") }}</span>
                 </div>
               </div>
             </article>
           {% endfor %}
         </div>
+        <button type="button" class="button button-secondary show-more" data-card-show-more data-step="12" hidden>{{ t("load_more") }}</button>
       {% else %}
         <p class="empty-inline">{{ t("recommendations_error") }}</p>
       {% endif %}
     </section>
 
-    <section class="feed-section" aria-labelledby="recent-recs-title">
-      <div class="section-heading sticky-section-heading">
+    <section aria-labelledby="recent-recs-title">
+      <div class="section-heading">
         <h2 id="recent-recs-title">{{ t("recent_recommendations") }}</h2>
-        <span class="count-pill">{{ recent_recommendations|length }}</span>
+        <span class="count">{{ recent_recommendations|length }}</span>
       </div>
       {% if recent_recommendations %}
-        <div class="book-result-list spacious">
+        <div class="panel" data-card-list>
           {% for book in recent_recommendations %}
-            <article class="book-result recommendation-card" data-detail-card data-title="{{ book.title }}">
-              <div class="book-copy">
+            <article class="row book-row" data-detail-card data-book-id="{{ book.book_id }}">
+              <div class="book-main">
                 <h3>{{ book.title }}</h3>
                 {% if book.author_id %}
-                  <a href="{{ url_for('books', author_id=book.author_id, lang=lang) }}" class="muted-link">{{ book.author_name or t("unknown_author") }}</a>
+                  <a class="byline muted-link" href="{{ url_for('books', author_id=book.author_id, lang=lang) }}">{{ book.author_name or t("unknown_author") }}</a>
                 {% else %}
-                  <span class="muted-text">{{ book.author_name or t("unknown_author") }}</span>
+                  <p class="byline">{{ book.author_name or t("unknown_author") }}</p>
                 {% endif %}
                 {% if book.user_name %}
                   <p class="recommendation-meta">{{ t("recommended_by") }} {{ book.user_name }}</p>
                 {% endif %}
-                <p class="book-description" data-book-id="{{ book.book_id }}">{{ t("loading_description") }}</p>
-              </div>
-              <div class="card-actions">
+                <details class="details">
+                  <summary>{{ t("details") }}</summary>
+                  <p class="book-description" data-book-id="{{ book.book_id }}">{{ t("loading_description") }}</p>
+                </details>
                 <button
                   type="button"
-                  class="bookmark-button"
+                  class="text-link bookmark-toggle"
                   data-bookmark-toggle
                   data-book-id="{{ book.book_id }}"
                   data-title="{{ book.title }}"
@@ -109,13 +111,17 @@
                 >
                   {{ t("bookmark") }}
                 </button>
+              </div>
+              <div class="row-actions">
+                <span class="action-label">{{ t("download_formats") }}</span>
                 <div class="inline-downloads" data-book-id="{{ book.book_id }}" data-title="{{ book.title }}">
-                  <span class="download-loading">{{ t("loading_description") }}</span>
+                  <span class="download-loading">{{ t("loading_formats") }}</span>
                 </div>
               </div>
             </article>
           {% endfor %}
         </div>
+        <button type="button" class="button button-secondary show-more" data-card-show-more data-step="12" hidden>{{ t("load_more") }}</button>
       {% else %}
         <p class="empty-inline">{{ t("recommendations_error") }}</p>
       {% endif %}
@@ -126,4 +132,5 @@
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/book-details.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/show-more.js') }}"></script>
 {% endblock %}

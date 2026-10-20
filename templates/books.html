@@ -4,30 +4,27 @@
 {% block page_id %}books{% endblock %}
 
 {% block content %}
-  <section class="page-heading books-heading">
-    <div>
-      <p class="eyebrow">{{ t("author_library") }}</p>
-      <h1>{{ author_name }}</h1>
-      <p class="lead compact">{{ t("books_found_note", count=books|length) }}</p>
-    </div>
-    <a href="{{ url_for('index', lang=lang) }}" class="button button-secondary">{{ t("back_to_search") }}</a>
-  </section>
+  <a href="{{ url_for('index', lang=lang) }}" class="back-link">← {{ t("back_to_search") }}</a>
 
-  <section class="author-bio">
-    <h2>{{ t("author_biography") }}</h2>
-    <p class="expandable-text" data-expandable>{{ author_bio or t("no_author_bio") }}</p>
-  </section>
+  <p class="eyebrow">{{ t("author_library") }}</p>
+  <h1 id="author-title">{{ author_name }}</h1>
+  <p class="lead">{{ t("books_found_note", count=books|length) }}</p>
+
+  {% if author_bio %}
+    <details class="author-bio">
+      <summary>{{ t("author_biography") }}</summary>
+      <p>{{ author_bio }}</p>
+    </details>
+  {% endif %}
 
   {% if error %}
     <div class="notice notice-error" role="alert">{{ error }}</div>
   {% endif %}
 
   <section
-    class="library-panel bookmark-root book-detail-root"
+    class="author-library book-detail-root"
     data-initial-format="epub"
     data-lang="{{ lang }}"
-    data-book-selected="{{ t('book_selected') }}"
-    data-books-selected="{{ t('books_selected') }}"
     data-choose-books="{{ t('choose_books') }}"
     data-selected-count="{{ t('selected_count') }}"
     data-format-selected="{{ t('format_selected') }}"
@@ -46,128 +43,101 @@
     data-processing="{{ t('processing') }}"
     data-downloaded="{{ t('downloaded') }}"
     data-archiving="{{ t('archiving') }}"
-    data-bookmark="{{ t('bookmark') }}"
-    data-bookmarked="{{ t('bookmarked') }}"
-    data-remove-bookmark="{{ t('remove_bookmark') }}"
-    data-unknown-author="{{ t('unknown_author') }}"
+    data-load-more="{{ t('load_more') }}"
     data-loading-description="{{ t('loading_description') }}"
+    data-loading-formats="{{ t('loading_formats') }}"
     data-no-book-description="{{ t('no_book_description') }}"
     data-details-failed="{{ t('details_failed') }}"
     data-download-formats="{{ t('download_formats') }}"
-    data-show-more="{{ t('show_more') }}"
-    data-show-less="{{ t('show_less') }}"
+    data-download-format-label="{{ t('download_format_label') }}"
     data-details="{{ t('details') }}"
-    data-close="{{ t('close') }}"
-    data-book-description="{{ t('book_description') }}"
   >
-    <div class="library-toolbar">
-      <label class="filter-field" for="bookFilter">
+    <div class="author-toolbar">
+      <label class="field" for="bookFilter">
         <span>{{ t("filter_titles") }}</span>
         <input type="search" id="bookFilter" placeholder="{{ t('filter_placeholder') }}" autocomplete="off">
       </label>
 
-      <div class="format-tabs" role="tablist" aria-label="{{ t('book_format') }}">
+      <div class="format-tabs" role="group" aria-label="{{ t('book_format') }}">
         {% for format in ("epub", "fb2", "mobi", "pdf", "docx") %}
           {% set count = format_counts.get(format, 0) %}
-          <button
-            type="button"
-            class="format-tab"
-            data-format="{{ format }}"
-            {% if count == 0 %}disabled{% endif %}
-          >
-            <span>{{ format|upper }}</span>
-            <strong>{{ count }}</strong>
-          </button>
+          {% if count > 0 %}
+            <button
+              type="button"
+              class="format-tab"
+              data-format="{{ format }}"
+              aria-pressed="false"
+            >
+              <span>{{ format|upper }}</span>
+            </button>
+          {% endif %}
         {% endfor %}
       </div>
     </div>
 
-    <div class="selection-strip">
-      <div>
-        <span class="selection-count" id="selectedCount">0</span>
-        <span id="selectionLabel">{{ t("selected") }}</span>
-      </div>
-      <div class="selection-actions">
-        <button type="button" class="button button-ghost" id="selectAllBtn">{{ t("select_visible") }}</button>
-        <button type="button" class="button button-ghost" id="deselectAllBtn">{{ t("clear") }}</button>
-      </div>
+    <div class="list-tools">
+      <button type="button" class="text-link" id="selectAllBtn">{{ t("select_visible") }}</button>
+      <button type="button" class="text-link" id="deselectAllBtn">{{ t("clear") }}</button>
     </div>
 
     <form id="downloadForm">
       <input type="hidden" name="format" id="selectedFormat" value="epub">
       <input type="hidden" name="author_name" value="{{ author_name or '' }}">
 
-      <div class="progress-panel" id="progressContainer" hidden>
-        <div class="progress-copy">
-          <span id="progressText">{{ t("preparing_download") }}</span>
-          <strong id="progressPercent">0%</strong>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" id="progressBar"></div>
-        </div>
-      </div>
-
-      <div id="bookList" class="book-list">
+      <div id="bookList" class="panel">
         {% for book in books %}
           <article
-            class="book-item"
-            data-title="{{ book.title }}"
+            class="row author-book"
+            data-detail-card
             data-book-id="{{ book.book_id }}"
-            data-author="{{ author_name or '' }}"
-            data-author-id="{{ author_id }}"
-            data-url="https://flibusta.is/b/{{ book.book_id }}"
+            data-title="{{ book.title }}"
             data-formats="{{ book.links.keys()|join(',') }}"
             {% for format, link in book.links.items() %}
               data-link-{{ format }}="{{ link }}"
             {% endfor %}
           >
-            <button type="button" class="book-select-button" aria-pressed="false">
-              <span class="checkmark" aria-hidden="true"></span>
-              <span class="book-info">
-                <span class="book-title">{{ book.title }}</span>
-                <span class="book-formats">{{ book.links.keys()|map('upper')|join(' / ') }}</span>
-                <span class="book-description inline" data-book-id="{{ book.book_id }}" data-modal-only="true">{{ t("loading_description") }}</span>
-              </span>
-            </button>
-            <div class="book-row-actions">
-              <button
-                type="button"
-                class="bookmark-button icon"
-                data-bookmark-toggle
-                data-book-id="{{ book.book_id }}"
-                data-title="{{ book.title }}"
-                data-author="{{ author_name or '' }}"
-                data-author-id="{{ author_id }}"
-                data-url="https://flibusta.is/b/{{ book.book_id }}"
-              >
-                {{ t("bookmark") }}
-              </button>
-              <button type="button" class="details-button" data-details-button data-book-id="{{ book.book_id }}" data-title="{{ book.title }}">
-                {{ t("details") }}
-              </button>
+            <input class="book-checkbox" type="checkbox" id="book-{{ book.book_id }}" data-select="{{ book.book_id }}">
+            <div class="book-main">
+              <label class="book-title" for="book-{{ book.book_id }}">{{ book.title }}</label>
+              <p class="byline">{{ t("formats_label") }}: {{ book.links.keys()|map('upper')|join(' · ') }}</p>
+              <details class="details">
+                <summary>{{ t("details") }}</summary>
+                <p class="book-description" data-book-id="{{ book.book_id }}">{{ t("loading_description") }}</p>
+              </details>
             </div>
           </article>
         {% endfor %}
       </div>
 
-      <section class="empty-state small" id="emptyState" hidden>
-        <h2>{{ t("no_books_match") }}</h2>
+      <section class="empty-state" id="emptyState" hidden>
         <p>{{ t("no_books_match_hint") }}</p>
       </section>
 
-      <div class="download-bar">
-        <div>
-          <strong id="downloadSummary">{{ t("choose_books") }}</strong>
-          <span id="formatSummary">{{ t("format_selected", format="EPUB") }}</span>
+      <button type="button" class="button button-secondary show-more" id="showMoreBooks" hidden>{{ t("load_more") }}</button>
+
+      <div class="download-bar" id="downloadBar" hidden>
+        <div class="progress-panel" id="progressContainer" hidden>
+          <div class="progress-copy">
+            <span id="progressText">{{ t("preparing_download") }}</span>
+            <strong id="progressPercent">0%</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressBar"></div>
+          </div>
         </div>
-        <button type="submit" class="button button-primary" id="downloadBtn" disabled>{{ t("download") }}</button>
+        <div class="download-row">
+          <div class="download-copy">
+            <strong id="downloadSummary">{{ t("choose_books") }}</strong>
+            <span id="formatSummary">{{ t("format_selected", format="EPUB") }}</span>
+          </div>
+          <button type="submit" class="button button-primary" id="downloadBtn" disabled>{{ t("download") }}</button>
+        </div>
       </div>
     </form>
   </section>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/book-details.js') }}"></script>
   <script src="{{ url_for('static', filename='js/books.js') }}"></script>
 {% endblock %}

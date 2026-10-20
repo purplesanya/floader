@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLoader — простой поиск книг по автору или названию.">
+  <title>FLoader — поиск книг</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#/search" aria-label="FLoader — на главную">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"></path>
+            <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"></path>
+          </svg>
+        </span>
+        <span class="brand-name">FLoader</span>
+      </a>
+      <span class="language-label" aria-label="Язык интерфейса: русский">RU</span>
+    </div>
+  </header>
+
+  <main id="main" class="shell main" tabindex="-1">
+    <section id="view-search" class="view" aria-labelledby="search-title">
+      <p class="eyebrow">Поиск книг</p>
+      <h1 id="search-title" tabindex="-1">Какую книгу ищем?</h1>
+      <p class="lead">Введите автора или название — покажем книги и форматы.</p>
+
+      <form id="search-form" class="search-form" role="search">
+        <label class="sr-only" for="search-input">Автор или название книги</label>
+        <input id="search-input" name="q" type="search" placeholder="Автор или название книги" autocomplete="off" required>
+        <button type="submit" class="button button-primary">Найти</button>
+      </form>
+
+      <p class="examples">
+        <span>Например:</span>
+        <button type="button" class="text-link" data-example="Пушкин">Пушкин</button>
+        <span aria-hidden="true">·</span>
+        <button type="button" class="text-link" data-example="Мастер и Маргарита">Мастер и Маргарита</button>
+        <span aria-hidden="true">·</span>
+        <button type="button" class="text-link" data-example="Стругацкие">Стругацкие</button>
+      </p>
+
+      <p class="quiet-link"><a href="#/recommendations" class="text-link">Посмотреть рекомендации <span aria-hidden="true">→</span></a></p>
+    </section>
+
+    <section id="view-results" class="view" hidden aria-labelledby="results-title">
+      <a href="#/search" class="back-link">← Новый поиск</a>
+      <p class="eyebrow">Результаты поиска</p>
+      <h1 id="results-title" tabindex="-1"></h1>
+      <p class="lead" id="results-lead"></p>
+      <div id="results-content"></div>
+    </section>
+
+    <section id="view-author" class="view" hidden aria-labelledby="author-title">
+      <a href="#/search" class="back-link">← Назад к поиску</a>
+      <p class="eyebrow">Книги автора</p>
+      <h1 id="author-title" tabindex="-1"></h1>
+      <p class="lead" id="author-lead"></p>
+
+      <div class="author-toolbar">
+        <label class="field" for="author-filter">
+          <span>Фильтр по названию</span>
+          <input id="author-filter" type="search" placeholder="Введите часть названия..." autocomplete="off">
+        </label>
+        <div class="format-tabs" role="group" aria-label="Формат книги" id="author-formats"></div>
+      </div>
+
+      <div class="panel" id="author-books"></div>
+
+      <div class="download-bar" id="download-bar">
+        <div class="download-copy">
+          <strong id="selected-count">Выбрано: 0</strong>
+          <span id="selected-format">Формат EPUB</span>
+        </div>
+        <button type="button" class="button button-primary" id="download-button" disabled>Скачать</button>
+      </div>
+    </section>
+
+    <section id="view-recommendations" class="view" hidden aria-labelledby="recs-title">
+      <a href="#/search" class="back-link">← На главную</a>
+      <p class="eyebrow">Что почитать</p>
+      <h1 id="recs-title" tabindex="-1">Рекомендации</h1>
+      <p class="lead">Несколько книг, которые советуют читатели.</p>
+      <div class="panel" id="recommendations-list"></div>
+      <button type="button" class="button button-secondary show-more" id="show-more-recs" hidden>Показать ещё</button>
+    </section>
+
+    <section id="view-bookmarks" class="view" hidden aria-labelledby="bookmarks-title">
+      <a href="#/search" class="back-link">← На главную</a>
+      <p class="eyebrow">Сохранённое</p>
+      <h1 id="bookmarks-title" tabindex="-1">Закладки</h1>
+      <div id="bookmarks-content"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-inner">
+      <span>Для книг, которые вы имеете право скачивать.</span>
+      <span class="footer-links">
+        <a href="#/recommendations">Рекомендации</a>
+        <a href="#/bookmarks">Закладки</a>
+      </span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

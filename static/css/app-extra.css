@@ -1,0 +1,390 @@
+/* App-specific components layered on top of the search-first base. */
+
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.language-switch a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 36px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.language-switch a:hover {
+  color: var(--accent);
+}
+
+.language-switch a.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(243, 238, 228, 0.82);
+  backdrop-filter: blur(4px);
+}
+
+.loading-overlay.active {
+  display: flex;
+}
+
+.loading-box {
+  display: grid;
+  place-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 1.4rem 1.6rem;
+}
+
+.loading-box p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 820ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.notice {
+  margin-top: 18px;
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+
+.notice-error {
+  border: 1px solid rgba(169, 58, 55, 0.35);
+  background: rgba(169, 58, 55, 0.08);
+  color: #8f2f2c;
+}
+
+.format-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.format-tab strong {
+  min-width: 28px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.format-tab.active strong {
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--accent);
+}
+
+.list-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
+.author-bio {
+  margin: 12px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.author-bio summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.author-bio summary::marker {
+  color: var(--accent);
+}
+
+.author-bio p {
+  max-width: 70ch;
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.book-description {
+  max-width: 64ch;
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.book-description.muted-empty {
+  color: var(--faint);
+}
+
+.download-loading,
+.download-label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.download-loading {
+  font-weight: 400;
+}
+
+.download-label {
+  width: 100%;
+  font-weight: 600;
+}
+
+.format-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--control-line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--accent);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.format-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.row.is-extra {
+  display: none;
+}
+
+.bookmark-toggle.saved {
+  color: var(--accent-strong);
+}
+
+.muted-link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: rgba(44, 95, 158, 0.35);
+  text-underline-offset: 0.18em;
+}
+
+.muted-link:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.inline-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.recommendation-meta {
+  margin: 0.25rem 0 0;
+  color: var(--faint);
+  font-size: 0.88rem;
+}
+
+.empty-title {
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+.results > section:first-of-type,
+.recommendations-feed > section:first-of-type,
+#bookmarkContent > section {
+  margin-top: 24px;
+}
+
+.results > section + section {
+  margin-top: 28px;
+}
+
+.progress-panel {
+  margin-bottom: 10px;
+}
+
+.progress-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+.download-bar {
+  display: block;
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  margin-top: 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.download-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.download-copy strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.download-copy span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 16px;
+  z-index: 50;
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+body[data-page="books"] .toast-stack {
+  bottom: calc(180px + env(safe-area-inset-bottom));
+}
+
+.toast-stack .toast {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  max-width: none;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: #ffffff;
+  box-shadow: 0 12px 32px rgba(29, 39, 48, 0.24);
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
+  animation: toast-in 180ms ease-out both;
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.toast.error .toast-icon {
+  background: rgba(169, 58, 55, 0.3);
+}
+
+.toast-title {
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.toast-message {
+  margin-top: 0.15rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+}
+
+@media (min-width: 560px) {
+  .list-tools {
+    margin-top: 12px;
+  }
+
+  .download-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .download-row .button {
+    min-width: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-stack .toast {
+    animation: none;
+  }
+
+  .spinner {
+    animation-duration: 2s;
+  }
+}

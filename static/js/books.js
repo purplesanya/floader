@@ -1,9 +1,8 @@
+const libraryPanel = document.querySelector(".author-library");
 const formatTabs = Array.from(document.querySelectorAll(".format-tab"));
 const selectedFormat = document.getElementById("selectedFormat");
 const bookList = document.getElementById("bookList");
 const emptyState = document.getElementById("emptyState");
-const selectedCount = document.getElementById("selectedCount");
-const selectionLabel = document.getElementById("selectionLabel");
 const bookFilter = document.getElementById("bookFilter");
 const selectAllBtn = document.getElementById("selectAllBtn");
 const deselectAllBtn = document.getElementById("deselectAllBtn");
@@ -15,8 +14,12 @@ const progressPercent = document.getElementById("progressPercent");
 const progressBar = document.getElementById("progressBar");
 const downloadSummary = document.getElementById("downloadSummary");
 const formatSummary = document.getElementById("formatSummary");
+const showMoreBooks = document.getElementById("showMoreBooks");
+const downloadBar = document.getElementById("downloadBar");
 const toastContainer = document.getElementById("toastContainer");
-const libraryPanel = document.querySelector(".library-panel");
+
+const BOOKS_STEP = 20;
+let revealedBooks = BOOKS_STEP;
 
 function text(key, replacements = {}) {
   const value = libraryPanel?.dataset[key] || "";
@@ -24,6 +27,28 @@ function text(key, replacements = {}) {
     (message, [name, replacement]) => message.replace(`{${name}}`, replacement),
     value,
   );
+}
+
+function getCards() {
+  return Array.from(bookList?.querySelectorAll(".author-book") || []);
+}
+
+function checkboxFor(card) {
+  return card.querySelector("[data-select]");
+}
+
+function currentFormat() {
+  return selectedFormat?.value || "epub";
+}
+
+function isVisibleCard(card) {
+  return !card.classList.contains("hidden") && !card.classList.contains("is-extra");
+}
+
+function setCardSelected(card, selected) {
+  const checkbox = checkboxFor(card);
+  if (checkbox) checkbox.checked = selected;
+  card.classList.toggle("is-selected", selected);
 }
 
 function showToast(title, message, type = "success") {
@@ -46,65 +71,15 @@ function showToast(title, message, type = "success") {
   content.append(titleEl, messageEl);
   toast.append(icon, content);
   toastContainer.appendChild(toast);
-  setTimeout(() => toast.remove(), 4200);
+  window.setTimeout(() => toast.remove(), 4200);
 }
 
-function getCards() {
-  return Array.from(bookList?.querySelectorAll(".book-item") || []);
-}
-
-function currentFormat() {
-  return selectedFormat?.value || "epub";
-}
-
-function setFormat(format) {
-  if (!selectedFormat) return;
-  selectedFormat.value = format;
-  formatTabs.forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.format === format);
-  });
-  applyFilters();
-}
-
-function isVisibleCard(card) {
-  return !card.classList.contains("hidden");
-}
-
-function setCardSelected(card, selected) {
-  card.classList.toggle("selected", selected);
-  card.querySelector(".book-select-button")?.setAttribute("aria-pressed", selected ? "true" : "false");
-}
-
-function applyFilters() {
-  const query = (bookFilter?.value || "").trim().toLocaleLowerCase();
-  const format = currentFormat();
-  let visibleCount = 0;
-
-  getCards().forEach((card) => {
-    const title = (card.dataset.title || "").toLocaleLowerCase();
-    const formats = (card.dataset.formats || "").split(",");
-    const visible = title.includes(query) && formats.includes(format);
-    card.classList.toggle("hidden", !visible);
-    if (!visible) {
-      setCardSelected(card, false);
-    } else {
-      visibleCount += 1;
-    }
-  });
-
-  if (emptyState) {
-    emptyState.hidden = visibleCount !== 0;
-  }
-  updateCount();
-}
-
-function updateCount() {
-  const count = getCards().filter((card) => card.classList.contains("selected")).length;
-  if (selectedCount) selectedCount.textContent = String(count);
-  if (selectionLabel) selectionLabel.textContent = count === 1 ? text("bookSelected") : text("booksSelected");
-  if (downloadBtn) downloadBtn.disabled = count === 0;
-
+function updateSummary() {
+  const cards = getCards();
+  const count = cards.filter((card) => checkboxFor(card)?.checked).length;
   const format = currentFormat().toUpperCase();
+
+  if (downloadBtn) downloadBtn.disabled = count === 0;
   if (downloadSummary) {
     downloadSummary.textContent =
       count === 0 ? text("chooseBooks") : text("selectedCount", { count: String(count) });
@@ -113,6 +88,57 @@ function updateCount() {
     const output = count <= 1 ? text("singleOutput") : text("zipOutput");
     formatSummary.textContent = `${text("formatSelected", { format })}, ${output}`;
   }
+  if (downloadBar) {
+    downloadBar.hidden = count === 0 && (!progressContainer || progressContainer.hidden);
+  }
+}
+
+function applyRevealLimit(filtering) {
+  const cards = getCards();
+  cards.forEach((card, index) => {
+    const extra = !filtering && index >= revealedBooks;
+    card.classList.toggle("is-extra", extra);
+    if (extra) setCardSelected(card, false);
+  });
+
+  if (showMoreBooks) {
+    const remaining = Math.max(cards.length - revealedBooks, 0);
+    showMoreBooks.hidden = filtering || remaining === 0;
+    showMoreBooks.textContent = `${text("loadMore")} (${Math.min(BOOKS_STEP, remaining)})`;
+  }
+}
+
+function applyFilters() {
+  const query = (bookFilter?.value || "").trim().toLocaleLowerCase();
+  const format = currentFormat();
+  applyRevealLimit(query !== "");
+  let visibleCount = 0;
+
+  getCards().forEach((card) => {
+    const title = (card.dataset.title || "").toLocaleLowerCase();
+    const formats = (card.dataset.formats || "").split(",");
+    const visible = !card.classList.contains("is-extra") && title.includes(query) && formats.includes(format);
+    card.classList.toggle("hidden", !visible);
+    if (!visible) {
+      setCardSelected(card, false);
+    } else {
+      visibleCount += 1;
+    }
+  });
+
+  if (emptyState) emptyState.hidden = visibleCount !== 0;
+  updateSummary();
+}
+
+function setFormat(format) {
+  if (!selectedFormat) return;
+  selectedFormat.value = format;
+  formatTabs.forEach((tab) => {
+    const active = tab.dataset.format === format;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  applyFilters();
 }
 
 function selectedDownloadPayload() {
@@ -125,7 +151,7 @@ function selectedDownloadPayload() {
   };
 
   getCards()
-    .filter((card) => card.classList.contains("selected"))
+    .filter((card) => checkboxFor(card)?.checked)
     .forEach((card) => {
       const link = card.getAttribute(`data-link-${format}`);
       if (link) {
@@ -137,6 +163,20 @@ function selectedDownloadPayload() {
   return payload;
 }
 
+function localizedStatusMessage(message) {
+  if (!message) return text("processing");
+
+  let match = message.match(/^Downloaded (\d+)\/(\d+)$/);
+  if (match) return text("downloaded", { done: match[1], total: match[2] });
+
+  match = message.match(/^Archiving (\d+)\/(\d+)$/);
+  if (match) return text("archiving", { done: match[1], total: match[2] });
+
+  if (message === "Download ready") return text("downloadReadyTitle");
+  if (message === "Starting downloads") return text("startingDownload");
+  return message;
+}
+
 function setProgress(statusData) {
   const progress = Number(statusData.progress || 0);
   if (progressBar) progressBar.style.width = `${progress}%`;
@@ -144,44 +184,31 @@ function setProgress(statusData) {
   if (progressText) progressText.textContent = localizedStatusMessage(statusData.message);
 }
 
-function localizedStatusMessage(message) {
-  if (!message) return text("processing");
-
-  let match = message.match(/^Downloaded (\d+)\/(\d+)$/);
-  if (match) {
-    return text("downloaded", { done: match[1], total: match[2] });
-  }
-
-  match = message.match(/^Archiving (\d+)\/(\d+)$/);
-  if (match) {
-    return text("archiving", { done: match[1], total: match[2] });
-  }
-
-  if (message === "Download ready") return text("downloadReadyTitle");
-  if (message === "Starting downloads") return text("startingDownload");
-  return message;
-}
-
 async function pollJob(jobId) {
-  const response = await fetch(`/job-status/${jobId}`);
-  const statusData = await response.json();
+  const response = await fetch(`/job-status/${encodeURIComponent(jobId)}`);
+  const statusData = await response.json().catch(() => ({}));
+
+  if (!response.ok || statusData.status === "error") {
+    if (progressContainer) progressContainer.hidden = true;
+    if (downloadBtn) downloadBtn.disabled = false;
+    showToast(
+      text("downloadFailedTitle"),
+      statusData.message || text("downloadFailedMessage"),
+      "error",
+    );
+    return;
+  }
+
   setProgress(statusData);
 
   if (statusData.status === "complete") {
     showToast(text("downloadReadyTitle"), text("downloadReadyMessage"));
-    window.location.href = `/fetch/${jobId}/${statusData.download_token}`;
-    if (downloadBtn) downloadBtn.disabled = false;
+    window.location.href = `/fetch/${encodeURIComponent(jobId)}/${statusData.download_token}`;
     window.setTimeout(() => {
       if (progressContainer) progressContainer.hidden = true;
+      if (downloadBtn) downloadBtn.disabled = false;
       setProgress({ progress: 0, message: text("preparingDownload") });
     }, 2200);
-    return;
-  }
-
-  if (statusData.status === "error") {
-    if (progressContainer) progressContainer.hidden = true;
-    if (downloadBtn) downloadBtn.disabled = false;
-    showToast(text("downloadFailedTitle"), statusData.message || text("downloadFailedMessage"), "error");
     return;
   }
 
@@ -190,35 +217,32 @@ async function pollJob(jobId) {
 
 formatTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    if (!tab.disabled && tab.dataset.format) {
-      setFormat(tab.dataset.format);
-    }
+    if (tab.dataset.format) setFormat(tab.dataset.format);
   });
 });
 
 bookFilter?.addEventListener("input", applyFilters);
 
 selectAllBtn?.addEventListener("click", () => {
-  getCards().filter(isVisibleCard).forEach((card) => {
-    setCardSelected(card, true);
-  });
-  updateCount();
+  getCards().filter(isVisibleCard).forEach((card) => setCardSelected(card, true));
+  updateSummary();
 });
 
 deselectAllBtn?.addEventListener("click", () => {
-  getCards().forEach((card) => {
-    setCardSelected(card, false);
-  });
-  updateCount();
+  getCards().forEach((card) => setCardSelected(card, false));
+  updateSummary();
 });
 
-bookList?.addEventListener("click", (event) => {
-  if (event.target.closest("[data-bookmark-toggle], [data-details-button], .expand-toggle")) return;
-  const card = event.target.closest(".book-item");
-  if (!card || card.classList.contains("hidden")) return;
-  const selected = !card.classList.contains("selected");
-  setCardSelected(card, selected);
-  updateCount();
+showMoreBooks?.addEventListener("click", () => {
+  revealedBooks = Math.min(revealedBooks + BOOKS_STEP, getCards().length);
+  applyFilters();
+});
+
+bookList?.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("[data-select]");
+  if (!checkbox) return;
+  checkbox.closest(".author-book")?.classList.toggle("is-selected", checkbox.checked);
+  updateSummary();
 });
 
 downloadForm?.addEventListener("submit", async (event) => {

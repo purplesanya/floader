@@ -21,6 +21,7 @@ FLoader is a Flask web application for searching an online book catalog, browsin
 ```text
 app.py                  Flask routes, caching, language selection, and job lifecycle
 flibusta_utils.py       HTML parsing, URL validation, downloads, and archive creation
+job_store.py            Atomic on-disk job records shared by all Gunicorn workers
 static/                 Responsive CSS, JavaScript, and branding
 tests/                  Offline parser and route tests using synthetic HTML
 ```
@@ -60,7 +61,7 @@ The CI workflow runs these checks on Python 3.11 and 3.12.
 
 ## Deployment
 
-`Procfile` and `render.yaml` provide a generic Gunicorn/Render deployment path. The app is stateless apart from short-lived temp files and in-browser bookmarks, so no database service is required.
+`Procfile` and `render.yaml` provide a generic Gunicorn/Render deployment path. The app is stateless apart from short-lived temp files and in-browser bookmarks, so no database service is required. Job records are persisted as small JSON files in the OS temp directory, which lets every Gunicorn worker report the same job status; if you scale to multiple hosts, replace `FileJobStore` with a shared store such as Redis.
 
 ## Responsible Use
 
