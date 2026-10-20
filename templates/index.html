@@ -32,10 +32,6 @@
       <button type="button" class="text-link" data-example="{{ t('example_strugatsky') }}">{{ t("example_strugatsky") }}</button>
     </p>
 
-    <p class="quiet-link">
-      <a href="{{ url_for('recommendations', lang=lang) }}" class="text-link">{{ t("nav_recommendations") }} <span aria-hidden="true">→</span></a>
-    </p>
-
     {% if error %}
       <div class="notice notice-error" role="alert">{{ error }}</div>
     {% endif %}
