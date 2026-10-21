@@ -21,12 +21,13 @@ FLoader is a Flask web application for searching an online book catalog, browsin
 ```text
 app.py                  Flask routes, caching, language selection, and job lifecycle
 flibusta_utils.py       HTML parsing, URL validation, downloads, and archive creation
+cache_store.py          Shared on-disk cache for parsed Flibusta data
 job_store.py            Atomic on-disk job records shared by all Gunicorn workers
 static/                 Responsive CSS, JavaScript, and branding
 tests/                  Offline parser and route tests using synthetic HTML
 ```
 
-The scraper is intentionally rate-limited and uses retries for transient upstream failures. Runtime downloads are written to the operating system temp directory and are removed after the job expires.
+The scraper is intentionally rate-limited and uses retries for transient upstream failures. Runtime downloads are written to the operating system temp directory and are removed after the job expires. Parsed metadata is cached in `.cache/http`, capped at 100 MB, so both Gunicorn workers share the same entries across restarts.
 
 ## Quick Start
 

@@ -73,8 +73,7 @@ class RouteTests(unittest.TestCase):
                 }
             ],
         }
-        with app_module.CACHE_LOCK:
-            app_module.cache.clear()
+        app_module.HTTP_CACHE.clear()
 
         try:
             with patch.object(app_module, "get_author_page", return_value=page) as get_page:
@@ -87,8 +86,7 @@ class RouteTests(unittest.TestCase):
             self.assertIn("Test biography.", html)
             self.assertIn("Example Book", html)
         finally:
-            with app_module.CACHE_LOCK:
-                app_module.cache.clear()
+            app_module.HTTP_CACHE.clear()
 
     def test_search_uses_primary_results_without_layout_fallback(self):
         primary = (

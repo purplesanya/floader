@@ -4,11 +4,11 @@ import tempfile
 import threading
 import time
 import uuid
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file, url_for
 
+from cache_store import FileCache
 from flibusta_utils import (
     ALLOWED_FORMATS,
     download_books_to_disk,
@@ -29,13 +29,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CACHE_DURATION = timedelta(hours=1)
-MAX_CACHE_ITEMS = 256
+CACHE_TTL_SEARCH = 60 * 60
+CACHE_TTL_RECOMMENDATIONS = 6 * 60 * 60
+CACHE_TTL_AUTHOR = 3 * 60 * 60
+CACHE_TTL_BOOK_DETAILS = 12 * 60 * 60
+CACHE_DIR = Path(app.root_path) / ".cache" / "http"
 JOB_TTL_SECONDS = 60 * 60
 MAX_BULK_BOOKS = 1000
 
-cache = {}
-CACHE_LOCK = threading.Lock()
+HTTP_CACHE = FileCache(CACHE_DIR, max_bytes=100 * 1024 * 1024, max_entries=1000)
 JOBS = FileJobStore(Path(tempfile.gettempdir()) / "floader_jobs")
 JOBS_LOCK = threading.Lock()
 
@@ -338,39 +340,12 @@ def persist_language(response):
     return response
 
 
-def _now():
-    return datetime.now()
-
-
-def cleanup_cache():
-    cutoff = _now() - CACHE_DURATION
-    expired_keys = [key for key, (_, timestamp) in cache.items() if timestamp < cutoff]
-    for key in expired_keys:
-        cache.pop(key, None)
-
-    if len(cache) > MAX_CACHE_ITEMS:
-        oldest_keys = sorted(cache, key=lambda key: cache[key][1])
-        for key in oldest_keys[: len(cache) - MAX_CACHE_ITEMS]:
-            cache.pop(key, None)
-
-
 def get_cached(key):
-    with CACHE_LOCK:
-        cleanup_cache()
-        cached = cache.get(key)
-        if not cached:
-            return None
-        value, timestamp = cached
-        if _now() - timestamp >= CACHE_DURATION:
-            cache.pop(key, None)
-            return None
-        return value
+    return HTTP_CACHE.get(key)
 
 
-def set_cached(key, value):
-    with CACHE_LOCK:
-        cleanup_cache()
-        cache[key] = (value, _now())
+def set_cached(key, value, ttl):
+    HTTP_CACHE.set(key, value, ttl)
 
 
 def cleanup_jobs():
@@ -457,7 +432,7 @@ def cached_catalog_search(query):
     cached = get_cached(f"catalog_search:{normalized_query}")
     if cached is None:
         cached = search_catalog(query)
-        set_cached(f"catalog_search:{normalized_query}", cached)
+        set_cached(f"catalog_search:{normalized_query}", cached, CACHE_TTL_SEARCH)
     return cached
 
 
@@ -465,7 +440,7 @@ def cached_recommendations():
     recommendations = get_cached("recommendations")
     if recommendations is None:
         recommendations = fetch_recommendations()
-        set_cached("recommendations", recommendations)
+        set_cached("recommendations", recommendations, CACHE_TTL_RECOMMENDATIONS)
     return recommendations
 
 
@@ -473,7 +448,7 @@ def cached_book_details(book_id):
     details = get_cached(f"book_details:{book_id}")
     if details is None:
         details = get_book_details(book_id)
-        set_cached(f"book_details:{book_id}", details)
+        set_cached(f"book_details:{book_id}", details, CACHE_TTL_BOOK_DETAILS)
     return details
 
 
@@ -481,7 +456,7 @@ def cached_author_page(author_id):
     page = get_cached(f"author_page:{author_id}")
     if page is None:
         page = get_author_page(author_id)
-        set_cached(f"author_page:{author_id}", page)
+        set_cached(f"author_page:{author_id}", page, CACHE_TTL_AUTHOR)
     return page
 
 
