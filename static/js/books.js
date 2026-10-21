@@ -19,7 +19,24 @@ const downloadBar = document.getElementById("downloadBar");
 const toastContainer = document.getElementById("toastContainer");
 
 const BOOKS_STEP = 20;
+const BOOKS_PREFERRED_FORMAT_KEY = "floaderPreferredFormat";
 let revealedBooks = BOOKS_STEP;
+
+function readBooksPreferredFormat() {
+  try {
+    return localStorage.getItem(BOOKS_PREFERRED_FORMAT_KEY) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function saveBooksPreferredFormat(format) {
+  try {
+    localStorage.setItem(BOOKS_PREFERRED_FORMAT_KEY, format);
+  } catch (error) {
+    // Storage is optional.
+  }
+}
 
 function text(key, replacements = {}) {
   const value = libraryPanel?.dataset[key] || "";
@@ -130,7 +147,7 @@ function applyFilters() {
   updateSummary();
 }
 
-function setFormat(format) {
+function setFormat(format, persist = false) {
   if (!selectedFormat) return;
   selectedFormat.value = format;
   formatTabs.forEach((tab) => {
@@ -138,6 +155,9 @@ function setFormat(format) {
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-pressed", active ? "true" : "false");
   });
+  if (persist) {
+    saveBooksPreferredFormat(format);
+  }
   applyFilters();
 }
 
@@ -217,7 +237,7 @@ async function pollJob(jobId) {
 
 formatTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    if (tab.dataset.format) setFormat(tab.dataset.format);
+    if (tab.dataset.format) setFormat(tab.dataset.format, true);
   });
 });
 
@@ -276,7 +296,11 @@ downloadForm?.addEventListener("submit", async (event) => {
   }
 });
 
-const firstAvailableTab = formatTabs.find((tab) => !tab.disabled);
+const preferredFormatValue = readBooksPreferredFormat();
+const preferredTab = formatTabs.find(
+  (tab) => tab.dataset.format === preferredFormatValue && !tab.disabled,
+);
+const firstAvailableTab = preferredTab || formatTabs.find((tab) => !tab.disabled);
 if (firstAvailableTab?.dataset.format) {
   setFormat(firstAvailableTab.dataset.format);
 } else {

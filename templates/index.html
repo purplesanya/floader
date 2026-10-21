@@ -17,6 +17,7 @@
         id="searchInput"
         type="search"
         placeholder="{{ t('search_placeholder') }}"
+        value="{{ query or '' }}"
         required
         autocomplete="off"
       >
@@ -46,5 +47,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/search.js', v='20261021') }}"></script>
+  <script src="{{ url_for('static', filename='js/search.js', v='20261022') }}"></script>
 {% endblock %}

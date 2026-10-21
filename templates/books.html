@@ -18,7 +18,10 @@
   {% endif %}
 
   {% if error %}
-    <div class="notice notice-error" role="alert">{{ error }}</div>
+    <div class="notice notice-error" role="alert">
+      <p>{{ error }}</p>
+      <a class="button button-secondary" href="{{ url_for('books', author_id=author_id, lang=lang) }}">{{ t("retry") }}</a>
+    </div>
   {% endif %}
 
   <section
@@ -51,6 +54,7 @@
     data-download-formats="{{ t('download_formats') }}"
     data-download-format-label="{{ t('download_format_label') }}"
     data-details="{{ t('details') }}"
+    data-retry="{{ t('retry') }}"
   >
     <div class="author-toolbar">
       <label class="field" for="bookFilter">
@@ -138,6 +142,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/book-details.js', v='20261021') }}"></script>
-  <script src="{{ url_for('static', filename='js/books.js', v='20261021') }}"></script>
+  <script src="{{ url_for('static', filename='js/book-details.js', v='20261022') }}"></script>
+  <script src="{{ url_for('static', filename='js/books.js', v='20261022') }}"></script>
 {% endblock %}

@@ -191,6 +191,29 @@
   background: var(--accent-soft);
 }
 
+.format-button.preferred {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.format-button.preferred:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+}
+
+.download-retry {
+  font-size: 0.86rem;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice .button {
+  margin-top: 10px;
+}
+
 .row.is-extra {
   display: none;
 }

@@ -24,6 +24,7 @@
       data-download-formats="{{ t('download_formats') }}"
       data-download-format-label="{{ t('download_format_label') }}"
       data-details="{{ t('details') }}"
+      data-retry="{{ t('retry') }}"
     >
       {% if authors %}
         <section aria-labelledby="authors-heading">
@@ -99,6 +100,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/bookmarks.js', v='20261021') }}"></script>
-  <script src="{{ url_for('static', filename='js/book-details.js', v='20261021') }}"></script>
+  <script src="{{ url_for('static', filename='js/bookmarks.js', v='20261022') }}"></script>
+  <script src="{{ url_for('static', filename='js/book-details.js', v='20261022') }}"></script>
 {% endblock %}

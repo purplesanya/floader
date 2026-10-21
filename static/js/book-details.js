@@ -1,6 +1,15 @@
 const detailRoot = document.querySelector(".book-detail-root");
 const detailCache = new Map();
 const formatOrder = ["epub", "fb2", "mobi", "pdf", "docx"];
+const PREFERRED_FORMAT_KEY = "floaderPreferredFormat";
+
+function preferredFormat() {
+  try {
+    return localStorage.getItem(PREFERRED_FORMAT_KEY) || "";
+  } catch (error) {
+    return "";
+  }
+}
 
 function detailText(key) {
   return detailRoot?.dataset[key] || "";
@@ -42,6 +51,10 @@ function buildDownloadLink(bookId, title, format) {
   link.className = "format-button";
   link.href = `/download-book/${encodeURIComponent(bookId)}/${encodeURIComponent(format)}?${new URLSearchParams({ title })}`;
   link.textContent = format.toUpperCase();
+  link.dataset.format = format;
+  if (format === preferredFormat()) {
+    link.classList.add("preferred");
+  }
   const labelTemplate = detailText("downloadFormatLabel");
   if (labelTemplate) {
     link.setAttribute(
@@ -63,7 +76,12 @@ function updateDownloads(bookId, details) {
       const empty = document.createElement("span");
       empty.className = "download-loading";
       empty.textContent = detailText("detailsFailed");
-      node.appendChild(empty);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "text-link download-retry";
+      retry.dataset.retryBook = bookId;
+      retry.textContent = detailText("retry");
+      node.append(empty, retry);
       return;
     }
 
@@ -106,4 +124,28 @@ function observeDetails() {
 }
 
 document.addEventListener("bookmarks:updated", observeDetails);
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+
+  const formatLink = event.target.closest(".format-button[data-format]");
+  if (formatLink) {
+    try {
+      localStorage.setItem(PREFERRED_FORMAT_KEY, formatLink.dataset.format);
+    } catch (error) {
+      // Storage is optional.
+    }
+    return;
+  }
+
+  const retry = event.target.closest("[data-retry-book]");
+  if (retry) {
+    event.preventDefault();
+    const bookId = retry.dataset.retryBook;
+    if (!bookId) return;
+    detailCache.delete(bookId);
+    hydrateBook(bookId);
+  }
+});
+
 observeDetails();

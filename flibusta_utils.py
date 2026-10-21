@@ -330,7 +330,7 @@ def _collect_download_links(soup, book_id):
     return download_links
 
 
-def get_book_details(book_id, max_retries=3):
+def get_book_details(book_id, max_retries=2):
     if not str(book_id).isdigit():
         raise ValueError("Invalid book ID")
 
@@ -338,7 +338,7 @@ def get_book_details(book_id, max_retries=3):
     book_page_url = f"{BASE_URL}/b/{book_id}"
     for attempt in range(max_retries):
         try:
-            soup = _get_soup(session, book_page_url, timeout=15)
+            soup = _get_soup(session, book_page_url, timeout=10)
             return _book_details_from_soup(soup, book_id, book_page_url)
         except requests.exceptions.RequestException as exc:
             logger.warning("Book details attempt %s failed for %s: %s", attempt + 1, book_id, exc)
@@ -552,7 +552,7 @@ def _books_from_author_soup(soup, author_id):
     return books
 
 
-def get_author_page(author_id, max_retries=3):
+def get_author_page(author_id, max_retries=2):
     if not str(author_id).isdigit():
         raise ValueError("Invalid author ID")
 
@@ -560,7 +560,7 @@ def get_author_page(author_id, max_retries=3):
     for attempt in range(max_retries):
         try:
             logger.info("Fetching author page for %s", author_id)
-            soup = _get_soup(session, f"{BASE_URL}/a/{author_id}", timeout=20)
+            soup = _get_soup(session, f"{BASE_URL}/a/{author_id}", timeout=15)
             heading = soup.find("h1", class_="title") or soup.find("h1")
             books = _books_from_author_soup(soup, author_id)
             logger.info("Found %s unique books for author %s", len(books), author_id)

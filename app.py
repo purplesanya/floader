@@ -75,6 +75,7 @@ TRANSLATIONS = {
         "results_for": "Results for",
         "also_searched": "Also searched",
         "new_search": "New Search",
+        "retry": "Try again",
         "authors": "Authors",
         "books": "Books",
         "view_books": "View books",
@@ -83,8 +84,7 @@ TRANSLATIONS = {
         "no_results": "No results found",
         "no_results_hint": "Try another spelling, a shorter author name, or a book title fragment.",
         "search_again": "Search Again",
-        "books_title": "Books - FLoader",
-        "author_library": "Author library",
+        "books_title": "Books - FLoader",        "author_library": "Author library",
         "books_found_note": "Books found: {count}. Choose books and a format.",
         "back_to_search": "Back to Search",
         "filter_titles": "Filter titles",
@@ -191,6 +191,7 @@ TRANSLATIONS = {
         "results_for": "Результаты для",
         "also_searched": "Также искали",
         "new_search": "Новый поиск",
+        "retry": "Попробовать снова",
         "authors": "Авторы",
         "books": "Книги",
         "view_books": "Открыть книги",
@@ -497,6 +498,7 @@ def index():
             return render_template(
                 "index.html",
                 error=translate("search_error"),
+                query=query,
             )
 
     return render_template("index.html")

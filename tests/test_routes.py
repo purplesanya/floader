@@ -125,6 +125,32 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("ghbdtn", response.get_data(as_text=True))
 
+    def test_search_error_keeps_query_in_the_form(self):
+        with patch.object(
+            app_module,
+            "cached_catalog_search",
+            side_effect=RuntimeError("upstream failed"),
+        ):
+            response = self.client.post("/", data={"query": "Пушкин"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('value="Пушкин"', response.get_data(as_text=True))
+
+    def test_books_error_offers_a_retry_link(self):
+        app_module.HTTP_CACHE.clear()
+        with patch.object(
+            app_module,
+            "get_author_page",
+            side_effect=RuntimeError("upstream failed"),
+        ):
+            response = self.client.get("/books/7?lang=ru")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Попробовать снова", html)
+        self.assertIn("/books/7?lang=ru", html)
+        app_module.HTTP_CACHE.clear()
+
 
 if __name__ == "__main__":
     unittest.main()

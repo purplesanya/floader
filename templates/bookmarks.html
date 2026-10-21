@@ -23,6 +23,7 @@
     data-download-formats="{{ t('download_formats') }}"
     data-download-format-label="{{ t('download_format_label') }}"
     data-details="{{ t('details') }}"
+    data-retry="{{ t('retry') }}"
     data-no-bookmarks="{{ t('no_bookmarks') }}"
     data-no-bookmarks-hint="{{ t('no_bookmarks_hint') }}"
     data-back-to-search="{{ t('back_to_search') }}"
@@ -33,6 +34,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/bookmarks.js', v='20261021') }}"></script>
-  <script src="{{ url_for('static', filename='js/book-details.js', v='20261021') }}"></script>
+  <script src="{{ url_for('static', filename='js/bookmarks.js', v='20261022') }}"></script>
+  <script src="{{ url_for('static', filename='js/book-details.js', v='20261022') }}"></script>
 {% endblock %}
