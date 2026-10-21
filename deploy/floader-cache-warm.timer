@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically warm FLoader recommendation cache
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=floader-cache-warm.service
+
+[Install]
+WantedBy=timers.target

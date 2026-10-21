@@ -1,0 +1,20 @@
+[Unit]
+Description=FLoader web service
+After=network.target
+
+[Service]
+User=floader
+Group=www-data
+WorkingDirectory=/opt/apps/floader
+Environment=PORT=8103
+Environment=LOG_LEVEL=INFO
+ExecStart=/opt/apps/floader/.venv/bin/gunicorn app:app --bind 127.0.0.1:8103 --workers 2 --threads 4 --timeout 120
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/apps/floader
+
+[Install]
+WantedBy=multi-user.target

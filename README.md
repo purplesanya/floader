@@ -62,7 +62,7 @@ The CI workflow runs these checks on Python 3.11 and 3.12.
 
 ## Deployment
 
-`Procfile` and `render.yaml` provide a generic Gunicorn/Render deployment path. The app is stateless apart from short-lived temp files and in-browser bookmarks, so no database service is required. Job records are persisted as small JSON files in the OS temp directory, which lets every Gunicorn worker report the same job status; if you scale to multiple hosts, replace `FileJobStore` with a shared store such as Redis.
+`Procfile` and `render.yaml` provide a generic Gunicorn/Render deployment path. The `deploy/` directory contains the production systemd units, including a timer that warms the recommendations cache every 30 minutes. The app is stateless apart from short-lived temp files and in-browser bookmarks, so no database service is required. Job records are persisted as small JSON files in the OS temp directory, which lets every Gunicorn worker report the same job status. Parsed metadata is shared between workers through a 100 MB on-disk cache in `.cache/http`; if you scale to multiple hosts, replace both stores with shared services such as Redis.
 
 ## Responsible Use
 
